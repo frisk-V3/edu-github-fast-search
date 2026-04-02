@@ -1,99 +1,49 @@
-name: Build and Package (EXE & DEB)
+name: Build Console App
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push]
 
 jobs:
-  # --- Windows Build (EXE) ---
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '5.15.2'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2019_64'
-
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-
+      - uses: actions/checkout@v4
       - name: Configure and Build
         run: |
           mkdir build
           cd build
-          # ジェネレータを指定せず環境のデフォルト(VS2022)を使用
-          cmake ..
+          cmake -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
           cmake --build . --config Release
-
-      - name: Windows Deployment (windeployqt)
-        shell: pwsh
-        run: |
-          mkdir dist
-          # バイナリの生成場所を確認してデプロイ
-          if (Test-Path "build\Release\edu-github-fast-search.exe") {
-            $exePath = "build\Release\edu-github-fast-search.exe"
-          } else {
-            $exePath = "build\edu-github-fast-search.exe"
-          }
-          
-          copy $exePath dist\
-          windeployqt dist\edu-github-fast-search.exe --dir dist\
-
-      - name: Upload Windows Artifact
+      - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: edu-github-fast-search-windows
-          path: dist/
+          name: github-search-win
+          path: build/edu-github-fast-search.exe
 
-  # --- Linux Build (DEB) ---
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install Qt and Build Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qtbase5-dev build-essential cmake devscripts debhelper
-
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
       - name: Configure and Build
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
           make
-
-      - name: Create DEB Package Structure
+      - name: Create DEB
         run: |
           mkdir -p package/usr/local/bin
           mkdir -p package/DEBIAN
           cp build/edu-github-fast-search package/usr/local/bin/
-          
-          # 制御ファイルの作成
-          cat <<EOF > package/DEBIAN/control
-          Package: edu-github-fast-search
-          Version: 1.0.0
-          Section: utils
-          Priority: optional
-          Architecture: amd64
-          Maintainer: Developer
-          Description: High-speed GitHub search desktop tool.
-          EOF
-
-      - name: Build DEB
-        run: dpkg-deb --build package edu-github-fast-search.deb
-
-      - name: Upload Linux Artifact
+          echo "Package: edu-github-fast-search" > package/DEBIAN/control
+          echo "Version: 1.0.0" >> package/DEBIAN/control
+          echo "Architecture: amd64" >> package/DEBIAN/control
+          echo "Maintainer: Developer" >> package/DEBIAN/control
+          echo "Description: GitHub search tool" >> package/DEBIAN/control
+          dpkg-deb --build package edu-github-fast-search.deb
+      - name: Upload DEB
         uses: actions/upload-artifact@v4
         with:
-          name: edu-github-fast-search-debian
+          name: github-search-deb
           path: edu-github-fast-search.deb
