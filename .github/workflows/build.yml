@@ -6,13 +6,23 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Headers
+        shell: bash
+        run: |
+          mkdir -p include
+          curl -L https://raw.githubusercontent.com/yhirose/cpp-httplib/master/httplib.h -o include/httplib.h
+          curl -L https://github.com/nlohmann/json/releases/latest/download/json.hpp -o include/json.hpp
+
       - name: Configure and Build
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
           cmake --build . --config Release
+
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
@@ -22,26 +32,41 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Headers
+        run: |
+          mkdir -p include
+          curl -L https://raw.githubusercontent.com/yhirose/cpp-httplib/master/httplib.h -o include/httplib.h
+          curl -L https://github.com/nlohmann/json/releases/latest/download/json.hpp -o include/json.hpp
+
       - name: Install Dependencies
         run: sudo apt-get update && sudo apt-get install -y libssl-dev
+
       - name: Configure and Build
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
           make
+
       - name: Create DEB
         run: |
           mkdir -p package/usr/local/bin
           mkdir -p package/DEBIAN
           cp build/edu-github-fast-search package/usr/local/bin/
-          echo "Package: edu-github-fast-search" > package/DEBIAN/control
-          echo "Version: 1.0.0" >> package/DEBIAN/control
-          echo "Architecture: amd64" >> package/DEBIAN/control
-          echo "Maintainer: Developer" >> package/DEBIAN/control
-          echo "Description: GitHub search tool" >> package/DEBIAN/control
+          cat <<EOF > package/DEBIAN/control
+          Package: edu-github-fast-search
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Developer
+          Description: GitHub search tool
+          EOF
           dpkg-deb --build package edu-github-fast-search.deb
+
       - name: Upload DEB
         uses: actions/upload-artifact@v4
         with:
