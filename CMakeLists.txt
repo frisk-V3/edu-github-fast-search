@@ -2,16 +2,17 @@ cmake_minimum_required(VERSION 3.10)
 project(edu-github-fast-search)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+# OpenSSLが必要
+find_package(OpenSSL REQUIRED)
 
-add_executable(edu-github-fast-search
-    src/main.cpp
-    src/mainwindow.cpp
-    src/mainwindow.h
-)
+include_directories(include)
 
-target_link_libraries(edu-github-fast-search Qt5::Widgets)
+add_executable(edu-github-fast-search src/main.cpp)
+
+target_link_libraries(edu-github-fast-search OpenSSL::SSL OpenSSL::Crypto)
+
+# Windows環境でのソケットライブラリのリンク
+if(WIN32)
+    target_link_libraries(edu-github-fast-search ws2_32 crypt32)
+endif()
