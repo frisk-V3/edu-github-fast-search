@@ -1,0 +1,32 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Qt and Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools build-essential cmake
+
+    - name: Configure and Build
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+        make
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: edu-github-fast-search-binary
+        path: build/edu-github-fast-search
